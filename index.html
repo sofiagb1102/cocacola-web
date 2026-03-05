@@ -185,15 +185,22 @@
             fill: rgba(40, 40, 40, 1);
         }
 
+        /* --- ACTUALIZACIÓN TOOLTIP --- */
         #globalTooltip {
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            transform: translate(-50%, -100%);
-            margin-top: -15px;
+            transition: opacity 0.2s ease; /* Quitamos transform del transition para evitar saltos raros al reposicionar */
+            opacity: 0;
+            pointer-events: none;
+            position: fixed; /* Aseguramos fixed para basarnos en el viewport */
+            z-index: 9999;
         }
         #globalTooltip.visible {
             opacity: 1;
-            transform: translate(-50%, -100%) scale(1.05);
         }
+        /* La flechita (triángulo) se moverá dinámicamente con JS */
+        #globalTooltip .tooltip-arrow {
+            transition: left 0.2s ease;
+        }
+        /* ----------------------------- */
         
         #growthChart { filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.5)); }
 
@@ -419,7 +426,7 @@
                         <div id="globalTooltip" class="fixed top-0 left-0 bg-[#ffffff] text-[#1E1E1E] px-4 py-3 rounded-xl shadow-[0_15px_35px_rgba(0,0,0,0.5)] opacity-0 pointer-events-none z-[100] min-w-[160px] text-center border-b-4 border-[#F40009]">
                             <strong id="gtName" class="font-helvetica block text-[#F40009] text-lg font-bold tracking-tight"></strong>
                             <p id="gtDesc" class="font-light text-xs text-[#1E1E1E]/80 mt-1"></p>
-                            <div class="absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-3 h-3 bg-[#ffffff] rotate-45 border-b-4 border-r-4 border-[#F40009] rounded-sm"></div>
+                            <div class="tooltip-arrow absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-3 h-3 bg-[#ffffff] rotate-45 border-b-4 border-r-4 border-[#F40009] rounded-sm"></div>
                         </div>
                         <div class="w-full aspect-[2/1] relative flex items-center justify-center">
                             <svg viewBox="0 0 1000 500" class="w-full h-full drop-shadow-2xl">
@@ -643,14 +650,21 @@
     </footer>
 
     <script>
-        // --- DATA TIMELINE PREMIUM ---
-        const historyDataPremium = [
-            { year: "1886", title: "El Invento del Farmacéutico", desc: "John Pemberton crea en Atlanta un tónico para los nervios.", img: "https://i.imgur.com/B91m81c.png" },
-            { year: "1899", title: "El Primer Embotellado", desc: "Se utilizan botellas de lados rectos.", img: "https://i.imgur.com/KpOf4Nf.png" },
-            { year: "1915", title: "Nace la Botella Contour", desc: "Se patenta el icónico envase curvilíneo.", img: "https://i.imgur.com/uWAntBC.png" },
-            { year: "1982", title: "Revolución Dietética", desc: "Lanzamiento de Diet Coke en aluminio.", img: "https://i.imgur.com/ljKCjQb.png" },
-            { year: "2024", title: "Era Digital: Creations", desc: "Sabores co-creados con inteligencia artificial.", img: "https://i.imgur.com/0ynahOS.png" }
+        // --- DATA TIMELINE ---
+        // We define historyData initially, if it was missing. If it exists in your script, keep it.
+        const historyData = [
+             { year: "1886", title: "El Invento del Farmacéutico", desc: "John Pemberton crea en Atlanta un tónico para los nervios.", img: "https://i.imgur.com/B91m81c.png" },
+             { year: "1899", title: "El Primer Embotellado", desc: "Se utilizan botellas de lados rectos.", img: "https://i.imgur.com/KpOf4Nf.png" },
+             { year: "1915", title: "Nace la Botella Contour", desc: "Se patenta el icónico envase curvilíneo.", img: "https://i.imgur.com/uWAntBC.png" },
+             { year: "1982", title: "Revolución Dietética", desc: "Lanzamiento de Diet Coke en aluminio.", img: "https://i.imgur.com/ljKCjQb.png" },
+             { year: "2024", title: "Era Digital: Creations", desc: "Sabores co-creados con inteligencia artificial.", img: "https://i.imgur.com/0ynahOS.png" }
         ];
+
+        // Ensure initTimeline uses historyData or historyDataPremium consistently. 
+        // In previous versions it used historyDataPremium but window.addEventListener was calling initTimeline(). 
+        // Here we ensure it works if historyDataPremium was the defined array.
+        
+        const historyDataPremium = historyData; // Map for compatibility
 
         // --- DATA TIENDA (CATÁLOGO) EXACTA ---
         const shopProducts = [
@@ -902,6 +916,7 @@
         // --- LÓGICA TIMELINE, MAPA Y CHARTS ---
         function initTimeline() {
             const nav = document.getElementById('timelineNav');
+            if(!nav) return;
             nav.innerHTML = '';
             historyDataPremium.forEach((item, index) => {
                 const li = document.createElement('li');
@@ -923,6 +938,7 @@
 
         function updateTimelineDisplay(index) {
             const display = document.getElementById('historyDisplay');
+            if(!display) return;
             const data = historyDataPremium[index];
             display.style.opacity = '0';
             display.style.transform = 'translateY(10px)';
@@ -930,18 +946,22 @@
                 const dot = document.getElementById(`dot-${i}`);
                 const label = document.getElementById(`label-${i}`);
                 if(i === index) {
-                    dot.classList.add('active'); dot.classList.remove('bg-[#F40009]');
-                    label.classList.remove('text-[#ffffff]/50'); label.classList.add('text-[#ffffff]');
+                    if(dot) { dot.classList.add('active'); dot.classList.remove('bg-[#F40009]'); }
+                    if(label) { label.classList.remove('text-[#ffffff]/50'); label.classList.add('text-[#ffffff]'); }
                 } else {
-                    dot.classList.remove('active'); dot.classList.add('bg-[#F40009]');
-                    label.classList.add('text-[#ffffff]/50'); label.classList.remove('text-[#ffffff]');
+                    if(dot) { dot.classList.remove('active'); dot.classList.add('bg-[#F40009]'); }
+                    if(label) { label.classList.add('text-[#ffffff]/50'); label.classList.remove('text-[#ffffff]'); }
                 }
             });
             setTimeout(() => {
-                document.getElementById('historyYear').innerText = data.year;
-                document.getElementById('historyTitle').innerText = data.title;
-                document.getElementById('historyDesc').innerText = data.desc;
-                document.getElementById('historyImage').src = data.img;
+                const hYear = document.getElementById('historyYear');
+                const hTitle = document.getElementById('historyTitle');
+                const hDesc = document.getElementById('historyDesc');
+                const hImage = document.getElementById('historyImage');
+                if(hYear) hYear.innerText = data.year;
+                if(hTitle) hTitle.innerText = data.title;
+                if(hDesc) hDesc.innerText = data.desc;
+                if(hImage) hImage.src = data.img;
                 display.style.opacity = '1';
                 display.style.transform = 'translateY(0)';
             }, 300);
@@ -972,28 +992,113 @@
             });
         }
 
+        // --- NUEVA LÓGICA DEL MAPA MUNDI (SMART CLAMP) ---
         function initGlobalMap() {
             const paths = document.querySelectorAll('.map-country');
             const tooltip = document.getElementById('globalTooltip');
+            if(!tooltip) return;
             const ttName = document.getElementById('gtName');
             const ttDesc = document.getElementById('gtDesc');
+            const arrow = tooltip.querySelector('.tooltip-arrow');
+
+            // Margen de seguridad contra los bordes de la pantalla
+            const PADDING = 15; 
+
+            function positionTooltip(e) {
+                // Hacer visible el tooltip pero invisible temporalmente (opacity 0 por la clase base)
+                // para poder medir sus dimensiones reales antes de dibujarlo.
+                tooltip.style.display = 'block'; 
+                
+                const ttRect = tooltip.getBoundingClientRect();
+                
+                // Ancho y alto del viewport
+                const vw = window.innerWidth;
+                const vh = window.innerHeight;
+
+                // Posición ideal inicial: centrado y justo encima del cursor
+                let left = e.clientX - (ttRect.width / 2);
+                let top = e.clientY - ttRect.height - 20; // 20px de separación vertical
+                
+                // Por defecto, la flecha está en el centro (50%)
+                let arrowLeft = 50; 
+
+                // --- COMPROBACIONES DE BORDES (CLAMPING) ---
+                
+                // Borde Derecho
+                if (left + ttRect.width > vw - PADDING) {
+                    left = vw - ttRect.width - PADDING;
+                    // Mover la flecha hacia la derecha para que siga apuntando al cursor
+                    arrowLeft = ((e.clientX - left) / ttRect.width) * 100;
+                }
+                
+                // Borde Izquierdo
+                if (left < PADDING) {
+                    left = PADDING;
+                    // Mover la flecha hacia la izquierda
+                    arrowLeft = ((e.clientX - left) / ttRect.width) * 100;
+                }
+
+                // Borde Superior (si no cabe arriba, lo ponemos debajo del cursor)
+                if (top < PADDING) {
+                    top = e.clientY + 20; // Lo movemos debajo
+                    // Invertir visualmente la flechita para que apunte hacia arriba
+                    if(arrow) {
+                        arrow.style.bottom = 'auto';
+                        arrow.style.top = '-6px';
+                        arrow.style.borderBottom = 'none';
+                        arrow.style.borderRight = 'none';
+                        arrow.style.borderTop = '4px solid #F40009';
+                        arrow.style.borderLeft = '4px solid #F40009';
+                    }
+                    tooltip.style.borderBottom = 'none';
+                    tooltip.style.borderTop = '4px solid #F40009';
+                } else {
+                    // Restaurar estilo normal de la flecha (apuntando abajo)
+                    if(arrow) {
+                        arrow.style.bottom = '-6px';
+                        arrow.style.top = 'auto';
+                        arrow.style.borderTop = 'none';
+                        arrow.style.borderLeft = 'none';
+                        arrow.style.borderBottom = '4px solid #F40009';
+                        arrow.style.borderRight = '4px solid #F40009';
+                    }
+                    tooltip.style.borderTop = 'none';
+                    tooltip.style.borderBottom = '4px solid #F40009';
+                }
+
+                // Limitar la flecha para que no se salga del propio tooltip
+                arrowLeft = Math.max(10, Math.min(arrowLeft, 90));
+
+                // Aplicar posiciones
+                tooltip.style.left = `${left}px`;
+                tooltip.style.top = `${top}px`;
+                if(arrow) arrow.style.left = `${arrowLeft}%`;
+            }
 
             paths.forEach(path => {
                 path.addEventListener('mousemove', (e) => {
-                    ttName.textContent = path.getAttribute('data-name');
-                    ttDesc.textContent = path.getAttribute('data-desc');
-                    tooltip.style.left = e.clientX + 'px';
-                    tooltip.style.top = e.clientY + 'px';
-                    tooltip.classList.add('visible');
+                    // Solo en desktop actualizamos datos en mousemove
+                    if(window.innerWidth > 768) {
+                        if(ttName) ttName.textContent = path.getAttribute('data-name');
+                        if(ttDesc) ttDesc.textContent = path.getAttribute('data-desc');
+                        positionTooltip(e);
+                        tooltip.classList.add('visible');
+                    }
                 });
-                path.addEventListener('mouseleave', () => { tooltip.classList.remove('visible'); });
+
+                path.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('visible');
+                });
+                
                 path.addEventListener('click', (e) => {
-                    ttName.textContent = path.getAttribute('data-name');
-                    ttDesc.textContent = path.getAttribute('data-desc');
-                    tooltip.style.left = e.clientX + 'px';
-                    tooltip.style.top = e.clientY + 'px';
+                    // En móvil y click, actualizar datos y mostrar
+                    if(ttName) ttName.textContent = path.getAttribute('data-name');
+                    if(ttDesc) ttDesc.textContent = path.getAttribute('data-desc');
+                    positionTooltip(e);
                     tooltip.classList.add('visible');
-                    setTimeout(() => { tooltip.classList.remove('visible'); }, 2500);
+                    
+                    // Ocultar tras unos segundos en móvil
+                    setTimeout(() => { tooltip.classList.remove('visible'); }, 3000);
                 });
             });
         }
